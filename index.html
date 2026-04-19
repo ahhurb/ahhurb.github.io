@@ -3,201 +3,569 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>徽乡药萃</title>
+    <title>徽乡药萃 - 官方网站</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary-green: #4CAF50; --nav-height: 75px; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "STHeiti", sans-serif; }
-        body { background: #000; color: #fff; overflow-x: hidden; }
-
-        /* 顶部导航栏 - 永久置顶 */
-        header {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: var(--nav-height);
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 50px; background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px); z-index: 9999;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.15);
-        }
-        .logo-area { display: flex; align-items: center; gap: 12px; color: #2e7d32; }
-        .logo-img { height: 45px; width: auto; object-fit: contain; } /* 适配Logo尺寸 */
-        .brand-name { font-size: 22px; font-weight: bold; letter-spacing: 1px; }
-
-        nav ul { display: flex; list-style: none; gap: 30px; }
-        nav ul li a { text-decoration: none; color: #333; font-size: 15px; font-weight: bold; transition: 0.3s; }
-        nav ul li a:hover { color: var(--primary-green); }
-
-        /* 轮播容器 */
-        #carousel-container { height: 100vh; width: 100%; position: relative; overflow: hidden; }
-        .slide {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0; transition: opacity 1.2s ease-in-out;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;
-        }
-        .slide.active { opacity: 1; z-index: 2; }
-        .slide-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); }
-        .slide-content { position: relative; z-index: 10; text-align: center; }
-        .slide-content h1 { font-size: 5rem; letter-spacing: 12px; margin-bottom: 25px; text-shadow: 0 5px 20px rgba(0,0,0,0.6); }
+        :root { --primary-green: #2e7d32; --nav-height: 75px; --bg-gray: #f4f6f8; --danger-red: #d32f2f; }
         
-        .enter-btn {
-            padding: 12px 50px; border: 2px solid white; background: rgba(255,255,255,0.1);
-            color: white; font-size: 1.6rem; cursor: pointer; transition: 0.3s;
-        }
-        .enter-btn:hover { background: white; color: #2e7d32; font-weight: bold; }
+        /* 全局添加基础换行机制 */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "STHeiti", sans-serif; overflow-wrap: break-word; }
+        body { background: var(--bg-gray); color: #333; overflow-x: hidden; }
 
-        /* 手动控制按钮 */
-        .ctrl-btn {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            background: rgba(255,255,255,0.1); border: none; color: white;
-            font-size: 40px; padding: 25px 15px; cursor: pointer; z-index: 100;
-            transition: 0.3s;
+        /* 顶部导航栏 */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; height: var(--nav-height);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 50px; background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px); z-index: 9999; box-shadow: 0 2px 15px rgba(0,0,0,0.1);
         }
+        .logo-area { display: flex; align-items: center; gap: 12px; color: var(--primary-green); cursor: pointer;}
+        .logo-img { height: 45px; width: auto; object-fit: contain; }
+        .brand-name { font-size: 22px; font-weight: bold; }
+
+        nav ul { display: flex; list-style: none; gap: 30px; align-items: center; }
+        nav ul li a { text-decoration: none; color: #333; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        nav ul li a:hover { color: var(--primary-green); }
+        .nav-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid #eee; transition: 0.3s; }
+        .nav-avatar:hover { border-color: var(--primary-green); }
+
+        /* 视图切换容器 */
+        .view-section { display: none; padding-top: var(--nav-height); min-height: 100vh; }
+        .view-section.active { display: block; }
+        #home-view { padding-top: 0; }
+
+        /* 轮播图 */
+        #carousel-container { height: 100vh; width: 100%; position: relative; overflow: hidden; background: #000; }
+        .slide { 
+            position: absolute; top:0; left:0; width:100%; height:100%; 
+            opacity: 0; pointer-events: none; 
+            transition: opacity 0.8s ease-in-out; 
+            display:flex; flex-direction:column; align-items:center; justify-content:center; z-index: 1; 
+        }
+        .slide.last-active { opacity: 1; z-index: 1; } 
+        .slide.active { opacity: 1; pointer-events: auto; z-index: 2; }
+        .slide-bg { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter:brightness(0.6); }
+        .slide-content { position:relative; z-index:10; text-align:center; color:white;}
+        .slide-content h1 { font-size: 5rem; letter-spacing: 12px; margin-bottom: 25px; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+        .enter-btn { padding: 12px 50px; border: 2px solid white; background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
+        .enter-btn:hover { background: white; color: var(--primary-green); font-weight: bold; }
+
+        .ctrl-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: none; color: white; font-size: 40px; padding: 25px 15px; cursor: pointer; z-index: 100; transition: 0.3s; }
         .ctrl-btn:hover { background: rgba(255,255,255,0.3); }
         .btn-prev { left: 0; border-radius: 0 8px 8px 0; }
         .btn-next { right: 0; border-radius: 8px 0 0 8px; }
 
-        /* 详情内容页 */
-        #detail-view {
-            display: none; position: fixed; top: var(--nav-height); left: 0;
-            width: 100%; height: calc(100vh - var(--nav-height));
-            background: #fff; color: #333; z-index: 10000; overflow-y: auto;
-        }
-        .content-card { max-width: 1000px; margin: 40px auto; padding: 0 25px; }
-        #detail-img-small { width: 100%; max-height: 500px; object-fit: cover; border-radius: 12px; margin-bottom: 35px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .close-btn { cursor: pointer; color: var(--primary-green); margin-bottom: 25px; display: inline-block; font-weight: bold; font-size: 1.1rem; border: 1px solid var(--primary-green); padding: 5px 15px; border-radius: 20px; transition: 0.3s; }
-        .close-btn:hover { background: var(--primary-green); color: white; }
-        .markdown-body { line-height: 1.8; font-size: 1.2rem; color: #333; }
+        /* 列表与卡片 - 增加强制换行 */
+        .list-container, .content-card { max-width: 900px; margin: 40px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); word-break: break-word; }
+        .list-item { padding: 18px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; transition: 0.2s; }
+        .list-item:hover { color: var(--primary-green); transform: translateX(8px); }
+        
+        #doc-banner { width: 100%; height: 40vh; object-fit: cover; display: none; }
 
-        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 99999; }
+        /* 论坛样式 - 增加强制换行 */
+        .forum-card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); height: 170px; cursor: pointer; display: flex; flex-direction: column; transition: 0.2s; border: 1px solid transparent; word-break: break-word; }
+        .forum-card:hover { border-color: var(--primary-green); transform: translateY(-3px); }
+        .forum-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .forum-header img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+        .forum-title { font-weight: 800; font-size: 1.2rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .forum-preview { color: #666; font-size: 0.95rem; line-height: 1.6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; flex: 1; word-break: break-all; }
+
+        /* 帖子详情 */
+        .post-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        .user-meta { display: flex; align-items: center; gap: 12px; }
+        .user-meta img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .post-info-text { display: flex; flex-direction: column; }
+        .post-time { font-size: 12px; color: #999; margin-top: 4px; }
+        
+        /* 正文与回复区域的强制断字 */
+        .markdown-body { word-wrap: break-word; word-break: break-word; }
+        .markdown-body img { max-width: 100%; border-radius: 8px; margin: 15px 0; }
+        .reply-item { border-top: 1px solid #f0f0f0; padding: 20px 0; word-break: break-word; }
+
+        /* 悬浮发布球 */
+        .fab { position: fixed; bottom: 40px; right: 40px; width: 65px; height: 65px; background: var(--primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4); z-index: 8000; transition: 0.3s; }
+        .fab:hover { transform: scale(1.1) rotate(90deg); }
+
+        /* 弹窗系统 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-box { background: white; padding: 35px; border-radius: 15px; width: 450px; max-width: 90%; position: relative; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .input-group { margin-bottom: 18px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+        .input-group input[type="text"], .input-group input[type="email"], .input-group input[type="password"], .input-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+        .input-group input[type="file"] { width: 100%; padding: 8px; font-size: 14px; border: 1px dashed #ccc; border-radius: 6px; background: #fafafa; }
+        
+        .btn-action { width: 100%; background: var(--primary-green); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-action:hover { opacity: 0.9; }
+        .auth-switch { text-align: center; margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; }
+        .error-msg { color: white; text-align: center; margin-top: 30vh; font-size: 1.5rem; line-height: 1.8; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo-area">
-            <img src="https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+        <div class="logo-area" onclick="switchView('home-view')">
+            <img src="https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/logo.jpg" class="logo-img" onerror="this.style.display='none'">
             <span class="brand-name">徽乡药萃</span>
         </div>
         <nav>
             <ul>
-                <li><a href="#" onclick="location.reload()">首页</a></li>
-                <li><a href="#">知识学习</a></li>
-                <li><a href="#">品质鉴定</a></li>
-                <li><a href="#">培训护航</a></li>
-                <li><a href="#">我的资源</a></li>
+                <li><a onclick="switchView('home-view')">首页</a></li>
+                <li><a onclick="requireAuth(() => loadList('knowledge'))">知识学习</a></li>
+                <li><a onclick="requireAuth(() => loadList('law & live'))">培训护航</a></li>
+                <li><a onclick="requireAuth(() => loadForum())">交流讨论</a></li>
+                <li id="user-nav"><a onclick="openAuthModal()">登录</a></li>
             </ul>
         </nav>
     </header>
 
-    <div id="carousel-container">
-        <div class="loading-overlay" id="loader">资源同步中...</div>
-        <button class="ctrl-btn btn-prev" onclick="manualChange(-1)">&#10094;</button>
-        <button class="ctrl-btn btn-next" onclick="manualChange(1)">&#10095;</button>
+    <div id="home-view" class="view-section active">
+        <div id="carousel-container"></div>
     </div>
 
-    <div id="detail-view">
-        <div class="content-card">
-            <div class="close-btn" onclick="closeDetail()">← 返回主页</div>
-            <img id="detail-img-small" src="">
-            <div id="md-content" class="markdown-body"></div>
+    <div id="list-view" class="view-section">
+        <div class="list-container" id="list-content"></div>
+    </div>
+
+    <div id="doc-view" class="view-section">
+        <img id="doc-banner" src="">
+        <div class="content-card" id="doc-card">
+            <div onclick="historyBack()" style="cursor:pointer; color:var(--primary-green); margin-bottom:20px; font-weight:bold;">← 返回</div>
+            <div id="md-render" class="markdown-body"></div>
         </div>
     </div>
 
-    <script>
-        const API_URL = "https://api.github.com/repos/ahhurb/ahhurb-data/contents/home";
-        const RAW_URL = "https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home";
-        let homeData = [];
-        let currentIndex = 0;
-        let slideInterval;
-        const SLIDE_DURATION = 5000; 
+    <div id="forum-view" class="view-section">
+        <div class="list-container" id="forum-content" style="background:transparent; box-shadow:none;"></div>
+        <div class="fab" onclick="requireAuth(() => openPostModal('post'))">发布</div>
+    </div>
 
-        async function init() {
+    <div id="post-detail-view" class="view-section">
+        <div class="content-card">
+            <div onclick="switchView('forum-view')" style="cursor:pointer; color:var(--primary-green); margin-bottom:25px; font-weight:bold;">← 返回论坛</div>
+            <div id="post-main-content"></div>
+            <div id="replies-content" style="margin-top: 30px;"></div>
+        </div>
+        <div class="fab" onclick="requireAuth(() => openPostModal('reply'))">回复</div>
+    </div>
+
+    <div class="modal-overlay" id="main-modal" onclick="if(event.target==this) this.style.display='none'">
+        <div class="modal-box" id="modal-inner"></div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 配置中心 
+        // ==========================================
+        const SUPABASE_URL = 'https://knfqxcqnkbutcykmqzad.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_LOG4zUmVuq0YSMHugylWzA_UVFQ7FmK';
+        
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        const DEFAULT_AVATAR = "https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/image/icon.jpg";
+        const GITHUB_BASE = "https://api.github.com/repos/ahhurb/ahhurb-data/contents/";
+
+        let currentUser = null;
+        let currentProfile = null;
+        let currentPostId = null;
+        let previousView = 'home-view';
+
+        // 视图路由
+        function switchView(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(!['doc-view', 'post-detail-view'].includes(id)) previousView = id;
+            window.scrollTo(0,0);
+        }
+        function historyBack() { switchView(previousView); }
+        function requireAuth(action) { if (!currentUser) { alert("请先登录！"); openAuthModal(); } else { action(); } }
+
+        // ==========================================
+        // 本地图片上传工具函数 (Supabase Storage)
+        // ==========================================
+        async function uploadFileToSupabase(file) {
+            if (!file) return null;
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+
             try {
-                const res = await fetch(API_URL);
-                const items = await res.json();
-                const folders = items.filter(i => i.type === 'dir');
-                for (let f of folders) {
-                    homeData.push({
-                        name: f.name,
-                        img: `${RAW_URL}/${f.name}/${f.name}.jpg`,
-                        md: `${RAW_URL}/${f.name}/${f.name}.md`
-                    });
-                }
-                renderCarousel();
-                resetTimer();
-                document.getElementById('loader').style.display = 'none';
-            } catch (e) {
-                console.error("加载失败", e);
+                const { data, error } = await db.storage.from('forum_images').upload(fileName, file);
+                if (error) throw error;
+                
+                const { data: publicData } = db.storage.from('forum_images').getPublicUrl(fileName);
+                return publicData.publicUrl;
+            } catch (error) {
+                console.error("上传错误:", error);
+                alert("图片上传失败，请确保您在 Supabase Storage 中创建了公开的 forum_images 桶！\n错误信息: " + error.message);
+                return null;
             }
         }
 
-        function renderCarousel() {
-            const container = document.getElementById('carousel-container');
-            homeData.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = `slide ${index === 0 ? 'active' : ''}`;
-                div.innerHTML = `
-                    <img src="${item.img}" class="slide-bg" onerror="this.src='https://via.placeholder.com/1920?text=图片加载中...'">
-                    <div class="slide-content">
-                        <h1>${item.name}</h1>
-                        <button class="enter-btn" onclick="openDetail(${index})">进入</button>
+        // ==========================================
+        // 身份验证与个人中心系统
+        // ==========================================
+        async function checkAuth() {
+            const { data: { user } } = await db.auth.getUser();
+            currentUser = user;
+            const nav = document.getElementById('user-nav');
+            if (user) {
+                const { data } = await db.from('profiles').select('*').eq('id', user.id).single();
+                currentProfile = data;
+                nav.innerHTML = `<img class="nav-avatar" src="${data?.avatar_url || DEFAULT_AVATAR}" onclick="openProfile()">`;
+            } else {
+                nav.innerHTML = `<a onclick="openAuthModal()">登录</a>`;
+            }
+        }
+
+        function openAuthModal(mode = 'login') {
+            const inner = document.getElementById('modal-inner');
+            inner.innerHTML = `
+                <h2 style="margin-bottom:20px;">${mode === 'login' ? '用户登录' : '新用户注册'}</h2>
+                <div class="input-group"><input type="email" id="auth-email" placeholder="邮箱账号"></div>
+                <div class="input-group"><input type="password" id="auth-pwd" placeholder="密码"></div>
+                ${mode === 'register' ? '<div class="input-group"><input type="text" id="auth-name" placeholder="设置论坛昵称"></div>' : ''}
+                <button class="btn-action" onclick="executeAuth('${mode}')">${mode === 'login' ? '立即登录' : '注册并登录'}</button>
+                <div class="auth-switch" onclick="openAuthModal('${mode === 'login' ? 'register' : 'login'}')">
+                    ${mode === 'login' ? '没有账号？点击注册' : '已有账号？点击登录'}
+                </div>
+            `;
+            document.getElementById('main-modal').style.display = 'flex';
+        }
+
+        async function executeAuth(mode) {
+            const email = document.getElementById('auth-email').value;
+            const pwd = document.getElementById('auth-pwd').value;
+            if (mode === 'register') {
+                const name = document.getElementById('auth-name').value;
+                const { error } = await db.auth.signUp({ email, password: pwd, options: { data: { username: name } } });
+                if (error) alert(error.message); else { alert("注册成功！"); location.reload(); }
+            } else {
+                const { error } = await db.auth.signInWithPassword({ email, password: pwd });
+                if (error) alert("账号或密码错误"); else location.reload();
+            }
+        }
+
+        function openProfile() {
+            const inner = document.getElementById('modal-inner');
+            inner.innerHTML = `
+                <h2>个人中心</h2>
+                <div style="display:flex; align-items:center; gap:15px; margin:20px 0;">
+                    <img src="${currentProfile?.avatar_url || DEFAULT_AVATAR}" style="width:65px; height:65px; border-radius:50%; object-fit:cover;">
+                    <div><p style="font-weight:bold; font-size:18px;">${currentProfile?.username}</p></div>
+                </div>
+                <button class="btn-action" style="background:#eee; color:#333; margin-bottom:10px;" onclick="openEditProfile()">修改资料</button>
+                <button class="btn-action" style="background:var(--danger-red);" onclick="db.auth.signOut().then(()=>location.reload())">退出登录</button>
+            `;
+            document.getElementById('main-modal').style.display = 'flex';
+        }
+
+        function openEditProfile() {
+            const inner = document.getElementById('modal-inner');
+            inner.innerHTML = `
+                <h2 style="margin-bottom:20px;">修改资料</h2>
+                <div class="input-group">
+                    <label>论坛昵称</label>
+                    <input type="text" id="edit-name" value="${currentProfile?.username || ''}">
+                </div>
+                <div class="input-group">
+                    <label>新密码 (不修改请留空)</label>
+                    <input type="password" id="edit-pwd" placeholder="输入新密码">
+                </div>
+                <div class="input-group">
+                    <label>更换头像 (从本地选择)</label>
+                    <input type="file" id="edit-avatar-file" accept="image/*">
+                </div>
+                <button class="btn-action" onclick="saveProfile()" id="save-profile-btn">保存修改</button>
+                <div class="auth-switch" onclick="openProfile()">← 返回个人中心</div>
+            `;
+        }
+
+        async function saveProfile() {
+            const newName = document.getElementById('edit-name').value.trim();
+            const newPwd = document.getElementById('edit-pwd').value.trim();
+            const fileInput = document.getElementById('edit-avatar-file');
+            const btn = document.getElementById('save-profile-btn');
+
+            if (!newName) return alert("昵称不能为空！");
+
+            btn.innerText = "资料上传保存中...";
+            btn.disabled = true;
+
+            try {
+                let newAvatar = currentProfile?.avatar_url || DEFAULT_AVATAR;
+                
+                if (fileInput.files.length > 0) {
+                    const uploadedUrl = await uploadFileToSupabase(fileInput.files[0]);
+                    if (uploadedUrl) newAvatar = uploadedUrl;
+                }
+
+                const { error: profileError } = await db.from('profiles')
+                    .update({ username: newName, avatar_url: newAvatar })
+                    .eq('id', currentUser.id);
+                if (profileError) throw profileError;
+
+                if (newPwd) {
+                    const { error: pwdError } = await db.auth.updateUser({ password: newPwd });
+                    if (pwdError) throw pwdError;
+                }
+
+                alert("资料修改成功！");
+                await checkAuth(); 
+                openProfile(); 
+            } catch (error) {
+                alert("修改失败: " + error.message);
+                btn.innerText = "保存修改";
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // GitHub 数据加载
+        // ==========================================
+        async function loadList(folder) {
+            switchView('list-view');
+            document.getElementById('list-content').innerHTML = "加载中...";
+            try {
+                const res = await fetch(GITHUB_BASE + encodeURIComponent(folder));
+                const files = await res.json();
+                document.getElementById('list-content').innerHTML = files.filter(f => f.name.endsWith('.md')).map(f => `
+                    <div class="list-item" onclick="showMd('${f.download_url}')"><span>📄 ${f.name.replace('.md','')}</span><span>❯</span></div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('list-content').innerHTML = "列表加载失败。";
+            }
+        }
+
+        async function showMd(mdUrl, imgUrl = null) {
+            switchView('doc-view');
+            
+            const banner = document.getElementById('doc-banner');
+            const card = document.getElementById('doc-card');
+
+            if (imgUrl) {
+                banner.src = imgUrl;
+                banner.style.display = 'block';
+                card.style.marginTop = '-60px';
+                card.style.position = 'relative';
+            } else {
+                banner.style.display = 'none';
+                card.style.marginTop = '40px';
+            }
+
+            document.getElementById('md-render').innerHTML = "文档渲染中...";
+            try {
+                const res = await fetch(mdUrl);
+                const text = await res.text();
+                document.getElementById('md-render').innerHTML = marked.parse(text);
+            } catch (e) {
+                document.getElementById('md-render').innerHTML = "无法加载 Markdown 内容。";
+            }
+        }
+
+        // ==========================================
+        // 交流讨论
+        // ==========================================
+        async function loadForum() {
+            switchView('forum-view');
+            document.getElementById('forum-content').innerHTML = "正在拉取论坛数据...";
+            const { data } = await db.from('posts').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false });
+            if (data) {
+                document.getElementById('forum-content').innerHTML = data.map(p => `
+                    <div class="forum-card" onclick="showPostDetail('${p.id}')">
+                        <div class="forum-header">
+                            <img src="${p.profiles.avatar_url || DEFAULT_AVATAR}">
+                            <span class="forum-title">${p.title}</span>
+                        </div>
+                        <div class="forum-preview">${p.content}</div>
                     </div>
-                `;
-                container.appendChild(div);
-            });
+                `).join('');
+            }
+        }
+
+        async function showPostDetail(id) {
+            currentPostId = id;
+            switchView('post-detail-view');
+            document.getElementById('post-main-content').innerHTML = "加载中...";
+            const { data: post } = await db.from('posts').select('*, profiles(*)').eq('id', id).single();
+            const isOwner = currentUser?.id === post.user_id;
+
+            document.getElementById('post-main-content').innerHTML = `
+                <div class="post-header">
+                    <div class="user-meta">
+                        <img src="${post.profiles.avatar_url || DEFAULT_AVATAR}">
+                        <div class="post-info-text">
+                            <span style="font-weight:bold;">${post.profiles.username}</span>
+                            <span class="post-time">${new Date(post.created_at).toLocaleDateString()} 发布</span>
+                        </div>
+                    </div>
+                    ${isOwner ? `<span style="color:red; cursor:pointer;" onclick="deletePost('${post.id}')">删除</span>` : ''}
+                </div>
+                <h1 style="margin-bottom:20px; word-break: break-all;">${post.title}</h1>
+                <div class="markdown-body">${marked.parse(post.content)}</div>
+            `;
+            loadReplies(id);
+        }
+
+        async function loadReplies(postId) {
+            document.getElementById('replies-content').innerHTML = "加载回复中...";
+            const { data } = await db.from('replies').select('*, profiles(*)').eq('post_id', postId).order('created_at', { ascending: false });
+            const html = data.map(r => `
+                <div class="reply-item">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <div class="user-meta">
+                            <img src="${r.profiles.avatar_url || DEFAULT_AVATAR}" style="width:30px; height:30px; object-fit: cover; border-radius: 50%;">
+                            <span style="font-weight:bold; font-size:14px;">${r.profiles.username}</span>
+                        </div>
+                        <span style="font-size:11px; color:#bbb;">${new Date(r.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div style="padding-left:42px; font-size:14px;">${marked.parse(r.content)}</div>
+                </div>
+            `).join('');
+            document.getElementById('replies-content').innerHTML = `<h3>回复 (${data.length})</h3>` + (html || '<p style="color:#999; margin-top:10px;">暂无回复</p>');
+        }
+
+        async function deletePost(id) {
+            if(confirm("确定删除该讨论吗？")) {
+                await db.from('posts').delete().eq('id', id);
+                loadForum();
+            }
+        }
+
+        function openPostModal(type) {
+            const inner = document.getElementById('modal-inner');
+            inner.innerHTML = `
+                <h2>${type === 'post' ? '发布新话题' : '回复讨论'}</h2>
+                ${type === 'post' ? '<div class="input-group"><label>问题概要</label><input id="m-title" placeholder="一句话描述你的问题"></div>' : ''}
+                <div class="input-group"><label>内容详情</label><textarea id="m-content" rows="5" placeholder="支持文字与 Markdown..."></textarea></div>
+                <div class="input-group">
+                    <label>插入附图 (可选)</label>
+                    <input type="file" id="m-image" accept="image/*">
+                </div>
+                <button class="btn-action" onclick="submitData('${type}')" id="submit-post-btn">立即发布</button>
+            `;
+            document.getElementById('main-modal').style.display = 'flex';
+        }
+
+        async function submitData(type) {
+            const content = document.getElementById('m-content').value.trim();
+            if(!content) return alert("内容不能为空");
+
+            const btn = document.getElementById('submit-post-btn');
+            btn.innerText = "内容上传中...";
+            btn.disabled = true;
+
+            let finalContent = content;
+            const fileInput = document.getElementById('m-image');
+
+            try {
+                if (fileInput && fileInput.files.length > 0) {
+                    const imgUrl = await uploadFileToSupabase(fileInput.files[0]);
+                    if (imgUrl) finalContent += `\n\n![附加图片](${imgUrl})`;
+                }
+
+                if (type === 'post') {
+                    const title = document.getElementById('m-title').value.trim();
+                    if(!title) { alert("概要不能为空"); btn.disabled = false; btn.innerText = "立即发布"; return; }
+                    await db.from('posts').insert({ user_id: currentUser.id, title, content: finalContent });
+                    loadForum();
+                } else {
+                    await db.from('replies').insert({ user_id: currentUser.id, post_id: currentPostId, content: finalContent });
+                    loadReplies(currentPostId);
+                }
+                document.getElementById('main-modal').style.display = 'none';
+            } catch (e) {
+                alert("发布失败: " + e.message);
+            } finally {
+                btn.innerText = "立即发布";
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // 首页轮播逻辑
+        // ==========================================
+        let slideInterval;
+        let currentSlideIdx = 0;
+        let isAnimating = false;
+
+        function startSlideTimer() {
+            if (slideInterval) clearInterval(slideInterval);
+            slideInterval = setInterval(() => changeSlide(1), 5000);
         }
 
         function changeSlide(direction) {
-            const slides = document.querySelectorAll('.slide');
-            if (slides.length < 2) return;
-            slides[currentIndex].classList.remove('active');
-            currentIndex = (currentIndex + direction + slides.length) % slides.length;
-            slides[currentIndex].classList.add('active');
+            if (isAnimating) return; 
+            const ss = document.querySelectorAll('.slide');
+            if (ss.length < 2) return;
+
+            isAnimating = true; 
+            const prev = currentSlideIdx;
+            currentSlideIdx = (currentSlideIdx + direction + ss.length) % ss.length;
+            
+            ss[prev].classList.remove('active');
+            ss[prev].classList.add('last-active'); 
+            ss[currentSlideIdx].classList.add('active'); 
+
+            setTimeout(() => { 
+                ss[prev].classList.remove('last-active'); 
+                isAnimating = false; 
+            }, 800);
         }
 
         function manualChange(direction) {
+            if (isAnimating) return; 
             changeSlide(direction);
-            resetTimer();
+            startSlideTimer(); 
         }
 
-        function resetTimer() {
-            if (slideInterval) clearInterval(slideInterval);
-            slideInterval = setInterval(() => changeSlide(1), SLIDE_DURATION);
-        }
-
-        async function openDetail(index) {
-            clearInterval(slideInterval);
-            const item = homeData[index];
-            const detailView = document.getElementById('detail-view');
-            const mdBox = document.getElementById('md-content');
-            
-            detailView.style.display = 'block';
-            document.getElementById('detail-img-small').src = item.img;
-            mdBox.innerHTML = "正在加载文档内容...";
-
+        async function initHome() {
             try {
-                const res = await fetch(item.md);
-                const text = await res.text();
-                mdBox.innerHTML = marked.parse(text);
-                detailView.scrollTo(0, 0);
-            } catch (e) {
-                mdBox.innerHTML = "文档加载失败。";
+                const res = await fetch(GITHUB_BASE + 'home');
+                if (!res.ok) throw new Error("API Limit");
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error("Data Format Error");
+                
+                const folders = data.filter(f => f.type === 'dir');
+                if (folders.length === 0) throw new Error("Empty Folders");
+
+                const slidesHtml = folders.map((f, i) => {
+                    const mdUrl = `https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home/${f.name}/${f.name}.md`;
+                    const imgUrl = `https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home/${f.name}/${f.name}.jpg`;
+                    
+                    return `
+                    <div class="slide ${i===0?'active':''}">
+                        <img src="${imgUrl}" class="slide-bg" onerror="this.src='https://via.placeholder.com/1920x1080?text=图片丢失'">
+                        <div class="slide-content">
+                            <h1>${f.name}</h1>
+                            <button class="enter-btn" onclick="requireAuth(() => showMd('${mdUrl}', '${imgUrl}'))">进入探索</button>
+                        </div>
+                    </div>
+                `}).join('');
+                
+                const controlsHtml = `
+                    <button class="ctrl-btn btn-prev" onclick="manualChange(-1)">&#10094;</button>
+                    <button class="ctrl-btn btn-next" onclick="manualChange(1)">&#10095;</button>
+                `;
+
+                document.getElementById('carousel-container').innerHTML = slidesHtml + controlsHtml;
+                
+                currentSlideIdx = 0;
+                startSlideTimer();
+
+            } catch (error) {
+                console.error("加载首页错误:", error);
+                document.getElementById('carousel-container').innerHTML = `
+                    <div class="error-msg">
+                        <p>🚧 主页资源加载失败</p>
+                        <p style="font-size: 1rem; color: #aaa;">(可能是触发了 GitHub 的请求次数限制，请等待几分钟后重试)</p>
+                    </div>
+                `;
             }
         }
 
-        function closeDetail() {
-            document.getElementById('detail-view').style.display = 'none';
-            resetTimer();
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('detail-view').style.display !== 'block') {
-                if (e.key === "ArrowLeft") manualChange(-1);
-                if (e.key === "ArrowRight") manualChange(1);
-            }
-        });
-
-        init();
+        initHome();
+        checkAuth();
     </script>
 </body>
 </html>
