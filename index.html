@@ -107,7 +107,7 @@
 
     <header>
         <div class="logo-area" onclick="switchView('home-view')">
-            <img src="https://gitee.com/ahhurb/ahhurb-data/raw/main/logo.jpg" class="logo-img" onerror="this.style.display='none'">
+            <img src="https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/logo.jpg" class="logo-img" onerror="this.style.display='none'">
             <span class="brand-name">徽乡药萃</span>
         </div>
         <nav>
@@ -177,8 +177,8 @@
         const SUPABASE_KEY = 'sb_publishable_LOG4zUmVuq0YSMHugylWzA_UVFQ7FmK';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const DEFAULT_AVATAR = "https://gitee.com/ahhurb/ahhurb-data/raw/main/image/icon.jpg";
-        const GITEE_BASE = "https://gitee.com/api/v5/repos/ahhurb/ahhurb-data/contents/";
+        const DEFAULT_AVATAR = "https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/image/icon.jpg";
+        const GITEE_BASE = "https://api.github.com/repos/ahhurb/ahhurb-data/contents/";
 
         let currentUser = null;
         let currentProfile = null;
@@ -610,7 +610,7 @@
 
                 const slidesHtml = folders.map((f, i) => {
                     const mdPath = `home/${f.name}/${f.name}.md`;
-                    const imgUrl = `https://gitee.com/ahhurb/ahhurb-data/raw/main/home/${f.name}/${f.name}.jpg`;
+                    const imgUrl = `https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home/${f.name}/${f.name}.jpg`;
                     
                     return `
                     <div class="slide ${i===0?'active':''}">
@@ -633,7 +633,7 @@
             } catch (error) {
                 document.getElementById('carousel-container').innerHTML = `
                     <div class="error-msg">
-                        <p>🚧 主页资源加载失败 (Gitee API 获取异常)</p>
+                        <p>🚧 主页资源加载失败 (GitHub API 获取异常)</p>
                     </div>`;
             }
         }
