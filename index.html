@@ -29,19 +29,20 @@
         .nav-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid #eee; transition: 0.3s; }
         .nav-avatar:hover { border-color: var(--primary-green); }
 
-        /* 视图切换容器 */
-        .view-section { display: none; padding-top: var(--nav-height); min-height: 100vh; }
-        .view-section.active { display: block; }
+        /* 视图切换容器与【新增动效】 */
+        .view-section { display: none; padding-top: var(--nav-height); min-height: 100vh; opacity: 0; }
+        .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         #home-view { padding-top: 0; }
+
+        /* 搜索框样式 */
+        .search-input { width: 100%; padding: 14px 18px; font-size: 15px; border: 1px solid #e0e0e0; border-radius: 8px; outline: none; transition: 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        .search-input:focus { border-color: var(--primary-green); box-shadow: 0 2px 12px rgba(46, 125, 50, 0.15); }
 
         /* 轮播图 */
         #carousel-container { height: 100vh; width: 100%; position: relative; overflow: hidden; background: #000; }
-        .slide { 
-            position: absolute; top:0; left:0; width:100%; height:100%; 
-            opacity: 0; pointer-events: none; 
-            transition: opacity 0.8s ease-in-out; 
-            display:flex; flex-direction:column; align-items:center; justify-content:center; z-index: 1; 
-        }
+        .slide { position: absolute; top:0; left:0; width:100%; height:100%; opacity: 0; pointer-events: none; transition: opacity 0.8s ease-in-out; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index: 1; }
         .slide.last-active { opacity: 1; z-index: 1; } 
         .slide.active { opacity: 1; pointer-events: auto; z-index: 2; }
         .slide-bg { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; filter:brightness(0.6); }
@@ -77,7 +78,6 @@
         .post-info-text { display: flex; flex-direction: column; }
         .post-time { font-size: 12px; color: #999; margin-top: 4px; }
         
-        /* 强制限制 Markdown 内的图片宽度，防止撑爆容器 */
         .markdown-body { word-wrap: break-word; word-break: break-word; }
         .markdown-body img { max-width: 100%; height: auto; border-radius: 8px; margin: 15px 0; display: block; }
         .reply-item { border-top: 1px solid #f0f0f0; padding: 20px 0; word-break: break-word; }
@@ -97,6 +97,8 @@
         
         .btn-action { width: 100%; background: var(--primary-green); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-action:hover { opacity: 0.9; }
+        .btn-outline { background: transparent; color: var(--primary-green); border: 2px solid var(--primary-green); }
+        .btn-outline:hover { background: #f0f8f1; }
         .auth-switch { text-align: center; margin-top: 15px; font-size: 14px; color: #666; cursor: pointer; }
         .error-msg { color: white; text-align: center; margin-top: 30vh; font-size: 1.5rem; line-height: 1.8; }
     </style>
@@ -105,7 +107,7 @@
 
     <header>
         <div class="logo-area" onclick="switchView('home-view')">
-            <img src="https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/logo.jpg" class="logo-img" onerror="this.style.display='none'">
+            <img src="https://gitee.com/ahhurb/ahhurb-data/raw/main/logo.jpg" class="logo-img" onerror="this.style.display='none'">
             <span class="brand-name">徽乡药萃</span>
         </div>
         <nav>
@@ -124,19 +126,25 @@
     </div>
 
     <div id="list-view" class="view-section">
-        <div class="list-container" id="list-content"></div>
+        <div class="list-container">
+            <input type="text" id="list-search" class="search-input" placeholder="🔍 在这里搜索相关文档..." oninput="filterList()">
+            <div id="list-content"></div>
+        </div>
     </div>
 
     <div id="doc-view" class="view-section">
         <img id="doc-banner" src="">
         <div class="content-card" id="doc-card">
-            <div onclick="historyBack()" style="cursor:pointer; color:var(--primary-green); margin-bottom:20px; font-weight:bold;">← 返回</div>
+            <div onclick="historyBack()" style="cursor:pointer; color:var(--primary-green); margin-bottom:20px; font-weight:bold;">← 返回首页</div>
             <div id="md-render" class="markdown-body"></div>
         </div>
     </div>
 
     <div id="forum-view" class="view-section">
-        <div class="list-container" id="forum-content" style="background:transparent; box-shadow:none;"></div>
+        <div class="list-container" style="background:transparent; box-shadow:none; padding-top: 0;">
+            <input type="text" id="forum-search" class="search-input" placeholder="🔍 搜索大家都在讨论什么话题..." oninput="filterForum()">
+            <div id="forum-content"></div>
+        </div>
         <div class="fab" onclick="requireAuth(() => openPostModal('post'))">发布</div>
     </div>
 
@@ -147,6 +155,14 @@
             <div id="replies-content" style="margin-top: 30px;"></div>
         </div>
         <div class="fab" onclick="requireAuth(() => openPostModal('reply'))">回复</div>
+    </div>
+
+    <div id="activity-view" class="view-section">
+        <div class="list-container">
+            <div onclick="switchView('home-view')" style="cursor:pointer; color:var(--primary-green); margin-bottom:20px; font-weight:bold;">← 返回首页</div>
+            <h2 id="activity-title" style="margin-bottom: 25px; border-bottom: 2px solid var(--primary-green); padding-bottom: 10px; display:inline-block;">活动记录</h2>
+            <div id="activity-content"></div>
+        </div>
     </div>
 
     <div class="modal-overlay" id="main-modal" onclick="if(event.target==this) this.style.display='none'">
@@ -161,40 +177,34 @@
         const SUPABASE_KEY = 'sb_publishable_LOG4zUmVuq0YSMHugylWzA_UVFQ7FmK';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const DEFAULT_AVATAR = "https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/image/icon.jpg";
-        const GITHUB_BASE = "https://api.github.com/repos/ahhurb/ahhurb-data/contents/";
+        const DEFAULT_AVATAR = "https://gitee.com/ahhurb/ahhurb-data/raw/main/image/icon.jpg";
+        const GITEE_BASE = "https://gitee.com/api/v5/repos/ahhurb/ahhurb-data/contents/";
 
         let currentUser = null;
         let currentProfile = null;
         let currentPostId = null;
         let previousView = 'home-view';
+        
+        // 搜索用的本地缓存数据
+        let currentListFiles = [];
+        let currentForumPosts = [];
 
         // ==========================================
-        // 原有基础功能路由与操作
+        // 路由与基础操作
         // ==========================================
         function switchView(id) {
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(v => {
+                v.classList.remove('active');
+            });
+            // 触发重绘以保证动画每次都生效
+            void document.getElementById(id).offsetWidth; 
             document.getElementById(id).classList.add('active');
+            
             if(!['doc-view', 'post-detail-view'].includes(id)) previousView = id;
             window.scrollTo(0,0);
         }
         function historyBack() { switchView(previousView); }
         function requireAuth(action) { if (!currentUser) { alert("请先登录！"); openAuthModal(); } else { action(); } }
-
-        async function uploadFileToSupabase(file) {
-            if (!file) return null;
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-            try {
-                const { data, error } = await db.storage.from('forum_images').upload(fileName, file);
-                if (error) throw error;
-                const { data: publicData } = db.storage.from('forum_images').getPublicUrl(fileName);
-                return publicData.publicUrl;
-            } catch (error) {
-                alert("图片上传失败！\n错误: " + error.message);
-                return null;
-            }
-        }
 
         async function checkAuth() {
             const { data: { user } } = await db.auth.getUser();
@@ -209,6 +219,69 @@
             }
         }
 
+        // ==========================================
+        // 个人中心与活动记录
+        // ==========================================
+        function openProfile() {
+            const inner = document.getElementById('modal-inner');
+            inner.innerHTML = `
+                <h2>个人中心</h2>
+                <div style="display:flex; align-items:center; gap:15px; margin:20px 0;">
+                    <img src="${currentProfile?.avatar_url || DEFAULT_AVATAR}" style="width:65px; height:65px; border-radius:50%; object-fit:cover;">
+                    <div><p style="font-weight:bold; font-size:18px;">${currentProfile?.username}</p></div>
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                    <button class="btn-action btn-outline" onclick="showMyActivity('posts')">我的话题</button>
+                    <button class="btn-action btn-outline" onclick="showMyActivity('replies')">我的回复</button>
+                </div>
+
+                <button class="btn-action" style="background:#eee; color:#333; margin-bottom:10px;" onclick="openEditProfile()">修改资料</button>
+                <button class="btn-action" style="background:var(--danger-red);" onclick="db.auth.signOut().then(()=>location.reload())">退出登录</button>
+            `;
+            document.getElementById('main-modal').style.display = 'flex';
+        }
+
+        // 查看我的话题或我的回复
+        async function showMyActivity(type) {
+            document.getElementById('main-modal').style.display = 'none';
+            switchView('activity-view');
+            const contentBox = document.getElementById('activity-content');
+            contentBox.innerHTML = "数据拉取中...";
+            
+            if (type === 'posts') {
+                document.getElementById('activity-title').innerText = "我发布的话题";
+                const { data } = await db.from('posts').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+                if (data && data.length > 0) {
+                    contentBox.innerHTML = data.map(p => `
+                        <div class="list-item" onclick="showPostDetail('${p.id}')">
+                            <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${p.title}</span>
+                            <span style="color:#999; font-size:12px; margin-left:15px;">${new Date(p.created_at).toLocaleDateString()}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    contentBox.innerHTML = "<p style='color:#999; text-align:center; padding: 20px;'>您还没有发布过话题哦。</p>";
+                }
+            } else {
+                document.getElementById('activity-title').innerText = "我的回复记录";
+                const { data } = await db.from('replies').select('*, posts(title)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+                if (data && data.length > 0) {
+                    contentBox.innerHTML = data.map(r => `
+                        <div class="list-item" style="flex-direction:column; align-items:flex-start;" onclick="showPostDetail('${r.post_id}')">
+                            <div style="font-size:12px; color:#aaa; margin-bottom:8px;">原贴标题：${r.posts?.title || '未知话题'}</div>
+                            <div class="markdown-body" style="color:#333; width:100%; max-height:80px; overflow:hidden;">${marked.parse(r.content)}</div>
+                            <div style="color:#999; font-size:11px; margin-top:10px; width:100%; text-align:right;">参与时间: ${new Date(r.created_at).toLocaleDateString()}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    contentBox.innerHTML = "<p style='color:#999; text-align:center; padding: 20px;'>您还没有回复过任何内容。</p>";
+                }
+            }
+        }
+
+        // ==========================================
+        // 身份验证与其他资料面板
+        // ==========================================
         function openAuthModal(mode = 'login') {
             const inner = document.getElementById('modal-inner');
             inner.innerHTML = `
@@ -237,36 +310,13 @@
             }
         }
 
-        function openProfile() {
-            const inner = document.getElementById('modal-inner');
-            inner.innerHTML = `
-                <h2>个人中心</h2>
-                <div style="display:flex; align-items:center; gap:15px; margin:20px 0;">
-                    <img src="${currentProfile?.avatar_url || DEFAULT_AVATAR}" style="width:65px; height:65px; border-radius:50%; object-fit:cover;">
-                    <div><p style="font-weight:bold; font-size:18px;">${currentProfile?.username}</p></div>
-                </div>
-                <button class="btn-action" style="background:#eee; color:#333; margin-bottom:10px;" onclick="openEditProfile()">修改资料</button>
-                <button class="btn-action" style="background:var(--danger-red);" onclick="db.auth.signOut().then(()=>location.reload())">退出登录</button>
-            `;
-            document.getElementById('main-modal').style.display = 'flex';
-        }
-
         function openEditProfile() {
             const inner = document.getElementById('modal-inner');
             inner.innerHTML = `
                 <h2 style="margin-bottom:20px;">修改资料</h2>
-                <div class="input-group">
-                    <label>论坛昵称</label>
-                    <input type="text" id="edit-name" value="${currentProfile?.username || ''}">
-                </div>
-                <div class="input-group">
-                    <label>新密码 (不修改请留空)</label>
-                    <input type="password" id="edit-pwd" placeholder="输入新密码">
-                </div>
-                <div class="input-group">
-                    <label>更换头像 (从本地选择)</label>
-                    <input type="file" id="edit-avatar-file" accept="image/*">
-                </div>
+                <div class="input-group"><label>论坛昵称</label><input type="text" id="edit-name" value="${currentProfile?.username || ''}"></div>
+                <div class="input-group"><label>新密码 (不修改请留空)</label><input type="password" id="edit-pwd" placeholder="输入新密码"></div>
+                <div class="input-group"><label>更换头像 (从本地选择)</label><input type="file" id="edit-avatar-file" accept="image/*"></div>
                 <button class="btn-action" onclick="saveProfile()" id="save-profile-btn">保存修改</button>
                 <div class="auth-switch" onclick="openProfile()">← 返回个人中心</div>
             `;
@@ -279,7 +329,6 @@
             const btn = document.getElementById('save-profile-btn');
 
             if (!newName) return alert("昵称不能为空！");
-
             btn.innerText = "资料上传保存中...";
             btn.disabled = true;
 
@@ -289,81 +338,119 @@
                     const uploadedUrl = await uploadFileToSupabase(fileInput.files[0]);
                     if (uploadedUrl) newAvatar = uploadedUrl;
                 }
-
-                const { error: profileError } = await db.from('profiles')
-                    .update({ username: newName, avatar_url: newAvatar })
-                    .eq('id', currentUser.id);
+                const { error: profileError } = await db.from('profiles').update({ username: newName, avatar_url: newAvatar }).eq('id', currentUser.id);
                 if (profileError) throw profileError;
 
                 if (newPwd) {
                     const { error: pwdError } = await db.auth.updateUser({ password: newPwd });
                     if (pwdError) throw pwdError;
                 }
-
                 alert("资料修改成功！");
                 await checkAuth(); 
                 openProfile(); 
-            } catch (error) {
-                alert("修改失败: " + error.message);
-            } finally {
-                btn.innerText = "保存修改";
-                btn.disabled = false;
-            }
+            } catch (error) { alert("修改失败: " + error.message); } 
+            finally { btn.innerText = "保存修改"; btn.disabled = false; }
+        }
+
+        async function uploadFileToSupabase(file) {
+            if (!file) return null;
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+            try {
+                const { data, error } = await db.storage.from('forum_images').upload(fileName, file);
+                if (error) throw error;
+                const { data: publicData } = db.storage.from('forum_images').getPublicUrl(fileName);
+                return publicData.publicUrl;
+            } catch (error) { alert("图片上传失败！\n错误: " + error.message); return null; }
         }
 
         // ==========================================
-        // 数据抓取与展示
+        // 知识学习 & 培训护航 (支持过滤)
         // ==========================================
         async function loadList(folder) {
             switchView('list-view');
+            document.getElementById('list-search').value = ''; // 每次进入清空搜索框
             document.getElementById('list-content').innerHTML = "加载中...";
             try {
-                const res = await fetch(GITHUB_BASE + encodeURIComponent(folder));
+                const res = await fetch(GITEE_BASE + encodeURIComponent(folder));
                 const files = await res.json();
-                document.getElementById('list-content').innerHTML = files.filter(f => f.name.endsWith('.md')).map(f => `
-                    <div class="list-item" onclick="showMd('${f.download_url}')"><span>📄 ${f.name.replace('.md','')}</span><span>❯</span></div>
-                `).join('');
+                // 缓存下来用于本地实时搜索
+                currentListFiles = files.filter(f => f.name.endsWith('.md'));
+                renderList();
             } catch (e) { document.getElementById('list-content').innerHTML = "列表加载失败。"; }
         }
 
-        async function showMd(mdUrl, imgUrl = null) {
+        function renderList(query = '') {
+            const filtered = currentListFiles.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
+            const html = filtered.map(f => `
+                <div class="list-item" onclick="showMd('${f.path}')"><span>📄 ${f.name.replace('.md','')}</span><span>❯</span></div>
+            `).join('');
+            document.getElementById('list-content').innerHTML = html || '<p style="text-align:center; color:#999; margin-top:30px;">没有找到符合条件的文档。</p>';
+        }
+
+        function filterList() {
+            renderList(document.getElementById('list-search').value);
+        }
+
+        async function showMd(mdPath, imgUrl = null) {
             switchView('doc-view');
             const banner = document.getElementById('doc-banner');
             const card = document.getElementById('doc-card');
 
             if (imgUrl) {
-                banner.src = imgUrl;
-                banner.style.display = 'block';
-                card.style.marginTop = '-60px';
-                card.style.position = 'relative';
+                banner.src = imgUrl; banner.style.display = 'block';
+                card.style.marginTop = '-60px'; card.style.position = 'relative';
             } else {
-                banner.style.display = 'none';
-                card.style.marginTop = '40px';
+                banner.style.display = 'none'; card.style.marginTop = '40px';
             }
 
-            document.getElementById('md-render').innerHTML = "文档渲染中...";
+            document.getElementById('md-render').innerHTML = "文档提取中...";
             try {
-                const res = await fetch(mdUrl);
-                const text = await res.text();
-                document.getElementById('md-render').innerHTML = marked.parse(text);
-            } catch (e) { document.getElementById('md-render').innerHTML = "无法加载 Markdown 内容。"; }
+                const res = await fetch(GITEE_BASE + encodeURIComponent(mdPath));
+                if (!res.ok) throw new Error("Fetch failed");
+                const data = await res.json();
+                
+                const cleanBase64 = data.content.replace(/\s/g, ''); 
+                const decodedText = decodeURIComponent(atob(cleanBase64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                document.getElementById('md-render').innerHTML = marked.parse(decodedText);
+            } catch (e) { document.getElementById('md-render').innerHTML = "无法加载 Markdown 内容，可能是仓库访问受限或文件不存在。"; }
         }
 
+        // ==========================================
+        // 交流讨论论坛 (支持过滤与回复删除)
+        // ==========================================
         async function loadForum() {
             switchView('forum-view');
+            document.getElementById('forum-search').value = ''; // 进入时清空搜索框
             document.getElementById('forum-content').innerHTML = "正在拉取论坛数据...";
             const { data } = await db.from('posts').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false });
             if (data) {
-                document.getElementById('forum-content').innerHTML = data.map(p => `
-                    <div class="forum-card" onclick="showPostDetail('${p.id}')">
-                        <div class="forum-header">
-                            <img src="${p.profiles.avatar_url || DEFAULT_AVATAR}">
-                            <span class="forum-title">${p.title}</span>
-                        </div>
-                        <div class="forum-preview">${p.content}</div>
-                    </div>
-                `).join('');
+                currentForumPosts = data;
+                renderForum();
             }
+        }
+
+        function renderForum(query = '') {
+            const q = query.toLowerCase();
+            const filtered = currentForumPosts.filter(p => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q));
+            
+            const html = filtered.map(p => `
+                <div class="forum-card" onclick="showPostDetail('${p.id}')">
+                    <div class="forum-header">
+                        <img src="${p.profiles.avatar_url || DEFAULT_AVATAR}">
+                        <span class="forum-title">${p.title}</span>
+                    </div>
+                    <div class="forum-preview">${p.content}</div>
+                </div>
+            `).join('');
+            document.getElementById('forum-content').innerHTML = html || '<p style="text-align:center; color:#999; margin-top:30px;">没有找到匹配的话题。</p>';
+        }
+
+        function filterForum() {
+            renderForum(document.getElementById('forum-search').value);
         }
 
         async function showPostDetail(id) {
@@ -382,7 +469,7 @@
                             <span class="post-time">${new Date(post.created_at).toLocaleDateString()} 发布</span>
                         </div>
                     </div>
-                    ${isOwner ? `<span style="color:red; cursor:pointer;" onclick="deletePost('${post.id}')">删除</span>` : ''}
+                    ${isOwner ? `<span style="color:red; cursor:pointer;" onclick="deletePost('${post.id}')">删除话题</span>` : ''}
                 </div>
                 <h1 style="margin-bottom:20px; word-break: break-all;">${post.title}</h1>
                 <div class="markdown-body">${marked.parse(post.content)}</div>
@@ -393,25 +480,40 @@
         async function loadReplies(postId) {
             document.getElementById('replies-content').innerHTML = "加载回复中...";
             const { data } = await db.from('replies').select('*, profiles(*)').eq('post_id', postId).order('created_at', { ascending: false });
-            const html = data.map(r => `
+            
+            const html = data.map(r => {
+                // 判断当前登录用户是否是该回复的作者
+                const isReplyOwner = currentUser?.id === r.user_id;
+                
+                return `
                 <div class="reply-item">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                         <div class="user-meta">
                             <img src="${r.profiles.avatar_url || DEFAULT_AVATAR}" style="width:30px; height:30px; object-fit: cover; border-radius: 50%;">
                             <span style="font-weight:bold; font-size:14px;">${r.profiles.username}</span>
                         </div>
-                        <span style="font-size:11px; color:#bbb;">${new Date(r.created_at).toLocaleDateString()}</span>
+                        <div style="text-align: right;">
+                            <div style="font-size:11px; color:#bbb; margin-bottom: 5px;">${new Date(r.created_at).toLocaleDateString()}</div>
+                            ${isReplyOwner ? `<span style="color:var(--danger-red); font-size:12px; cursor:pointer;" onclick="deleteReply('${r.id}', '${postId}')">删除回复</span>` : ''}
+                        </div>
                     </div>
                     <div class="markdown-body" style="padding-left:42px; font-size:14px;">${marked.parse(r.content)}</div>
                 </div>
-            `).join('');
+            `}).join('');
             document.getElementById('replies-content').innerHTML = `<h3>回复 (${data.length})</h3>` + (html || '<p style="color:#999; margin-top:10px;">暂无回复</p>');
         }
 
         async function deletePost(id) {
-            if(confirm("确定删除该讨论吗？")) {
+            if(confirm("确定彻底删除该话题吗？")) {
                 await db.from('posts').delete().eq('id', id);
                 loadForum();
+            }
+        }
+
+        async function deleteReply(replyId, postId) {
+            if(confirm("确定撤回这条回复吗？")) {
+                await db.from('replies').delete().eq('id', replyId);
+                loadReplies(postId); // 删除后局部刷新回复列表
             }
         }
 
@@ -500,22 +602,22 @@
 
         async function initHome() {
             try {
-                const res = await fetch(GITHUB_BASE + 'home');
+                const res = await fetch(GITEE_BASE + 'home');
                 if (!res.ok) throw new Error("API Limit");
                 const data = await res.json();
                 
                 const folders = data.filter(f => f.type === 'dir');
 
                 const slidesHtml = folders.map((f, i) => {
-                    const mdUrl = `https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home/${f.name}/${f.name}.md`;
-                    const imgUrl = `https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home/${f.name}/${f.name}.jpg`;
+                    const mdPath = `home/${f.name}/${f.name}.md`;
+                    const imgUrl = `https://gitee.com/ahhurb/ahhurb-data/raw/main/home/${f.name}/${f.name}.jpg`;
                     
                     return `
                     <div class="slide ${i===0?'active':''}">
                         <img src="${imgUrl}" class="slide-bg" onerror="this.src='https://via.placeholder.com/1920x1080?text=图片丢失'">
                         <div class="slide-content">
                             <h1>${f.name}</h1>
-                            <button class="enter-btn" onclick="requireAuth(() => showMd('${mdUrl}', '${imgUrl}'))">进入探索</button>
+                            <button class="enter-btn" onclick="requireAuth(() => showMd('${mdPath}', '${imgUrl}'))">进入探索</button>
                         </div>
                     </div>
                 `}).join('');
@@ -531,7 +633,7 @@
             } catch (error) {
                 document.getElementById('carousel-container').innerHTML = `
                     <div class="error-msg">
-                        <p>🚧 主页资源加载失败 (Github API 受限)</p>
+                        <p>🚧 主页资源加载失败 (Gitee API 获取异常)</p>
                     </div>`;
             }
         }
