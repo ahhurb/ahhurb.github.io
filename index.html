@@ -9,7 +9,6 @@
     <style>
         :root { --primary-green: #2e7d32; --nav-height: 75px; --bg-gray: #f4f6f8; --danger-red: #d32f2f; }
         
-        /* 全局添加基础换行机制 */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "STHeiti", sans-serif; overflow-wrap: break-word; }
         body { background: var(--bg-gray); color: #333; overflow-x: hidden; }
 
@@ -56,14 +55,14 @@
         .btn-prev { left: 0; border-radius: 0 8px 8px 0; }
         .btn-next { right: 0; border-radius: 8px 0 0 8px; }
 
-        /* 列表与卡片 - 增加强制换行 */
+        /* 列表与卡片 */
         .list-container, .content-card { max-width: 900px; margin: 40px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); word-break: break-word; }
         .list-item { padding: 18px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; transition: 0.2s; }
         .list-item:hover { color: var(--primary-green); transform: translateX(8px); }
         
         #doc-banner { width: 100%; height: 40vh; object-fit: cover; display: none; }
 
-        /* 论坛样式 - 增加强制换行 */
+        /* 论坛样式 */
         .forum-card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); height: 170px; cursor: pointer; display: flex; flex-direction: column; transition: 0.2s; border: 1px solid transparent; word-break: break-word; }
         .forum-card:hover { border-color: var(--primary-green); transform: translateY(-3px); }
         .forum-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -78,9 +77,9 @@
         .post-info-text { display: flex; flex-direction: column; }
         .post-time { font-size: 12px; color: #999; margin-top: 4px; }
         
-        /* 正文与回复区域的强制断字 */
+        /* 强制限制 Markdown 内的图片宽度，防止撑爆容器 */
         .markdown-body { word-wrap: break-word; word-break: break-word; }
-        .markdown-body img { max-width: 100%; border-radius: 8px; margin: 15px 0; }
+        .markdown-body img { max-width: 100%; height: auto; border-radius: 8px; margin: 15px 0; display: block; }
         .reply-item { border-top: 1px solid #f0f0f0; padding: 20px 0; word-break: break-word; }
 
         /* 悬浮发布球 */
@@ -160,9 +159,8 @@
         // ==========================================
         const SUPABASE_URL = 'https://knfqxcqnkbutcykmqzad.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_LOG4zUmVuq0YSMHugylWzA_UVFQ7FmK';
-        
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
+
         const DEFAULT_AVATAR = "https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/image/icon.jpg";
         const GITHUB_BASE = "https://api.github.com/repos/ahhurb/ahhurb-data/contents/";
 
@@ -171,7 +169,9 @@
         let currentPostId = null;
         let previousView = 'home-view';
 
-        // 视图路由
+        // ==========================================
+        // 原有基础功能路由与操作
+        // ==========================================
         function switchView(id) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(id).classList.add('active');
@@ -181,30 +181,21 @@
         function historyBack() { switchView(previousView); }
         function requireAuth(action) { if (!currentUser) { alert("请先登录！"); openAuthModal(); } else { action(); } }
 
-        // ==========================================
-        // 本地图片上传工具函数 (Supabase Storage)
-        // ==========================================
         async function uploadFileToSupabase(file) {
             if (!file) return null;
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-
             try {
                 const { data, error } = await db.storage.from('forum_images').upload(fileName, file);
                 if (error) throw error;
-                
                 const { data: publicData } = db.storage.from('forum_images').getPublicUrl(fileName);
                 return publicData.publicUrl;
             } catch (error) {
-                console.error("上传错误:", error);
-                alert("图片上传失败，请确保您在 Supabase Storage 中创建了公开的 forum_images 桶！\n错误信息: " + error.message);
+                alert("图片上传失败！\n错误: " + error.message);
                 return null;
             }
         }
 
-        // ==========================================
-        // 身份验证与个人中心系统
-        // ==========================================
         async function checkAuth() {
             const { data: { user } } = await db.auth.getUser();
             currentUser = user;
@@ -294,7 +285,6 @@
 
             try {
                 let newAvatar = currentProfile?.avatar_url || DEFAULT_AVATAR;
-                
                 if (fileInput.files.length > 0) {
                     const uploadedUrl = await uploadFileToSupabase(fileInput.files[0]);
                     if (uploadedUrl) newAvatar = uploadedUrl;
@@ -315,13 +305,14 @@
                 openProfile(); 
             } catch (error) {
                 alert("修改失败: " + error.message);
+            } finally {
                 btn.innerText = "保存修改";
                 btn.disabled = false;
             }
         }
 
         // ==========================================
-        // GitHub 数据加载
+        // 数据抓取与展示
         // ==========================================
         async function loadList(folder) {
             switchView('list-view');
@@ -332,14 +323,11 @@
                 document.getElementById('list-content').innerHTML = files.filter(f => f.name.endsWith('.md')).map(f => `
                     <div class="list-item" onclick="showMd('${f.download_url}')"><span>📄 ${f.name.replace('.md','')}</span><span>❯</span></div>
                 `).join('');
-            } catch (e) {
-                document.getElementById('list-content').innerHTML = "列表加载失败。";
-            }
+            } catch (e) { document.getElementById('list-content').innerHTML = "列表加载失败。"; }
         }
 
         async function showMd(mdUrl, imgUrl = null) {
             switchView('doc-view');
-            
             const banner = document.getElementById('doc-banner');
             const card = document.getElementById('doc-card');
 
@@ -358,14 +346,9 @@
                 const res = await fetch(mdUrl);
                 const text = await res.text();
                 document.getElementById('md-render').innerHTML = marked.parse(text);
-            } catch (e) {
-                document.getElementById('md-render').innerHTML = "无法加载 Markdown 内容。";
-            }
+            } catch (e) { document.getElementById('md-render').innerHTML = "无法加载 Markdown 内容。"; }
         }
 
-        // ==========================================
-        // 交流讨论
-        // ==========================================
         async function loadForum() {
             switchView('forum-view');
             document.getElementById('forum-content').innerHTML = "正在拉取论坛数据...";
@@ -419,7 +402,7 @@
                         </div>
                         <span style="font-size:11px; color:#bbb;">${new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
-                    <div style="padding-left:42px; font-size:14px;">${marked.parse(r.content)}</div>
+                    <div class="markdown-body" style="padding-left:42px; font-size:14px;">${marked.parse(r.content)}</div>
                 </div>
             `).join('');
             document.getElementById('replies-content').innerHTML = `<h3>回复 (${data.length})</h3>` + (html || '<p style="color:#999; margin-top:10px;">暂无回复</p>');
@@ -474,12 +457,8 @@
                     loadReplies(currentPostId);
                 }
                 document.getElementById('main-modal').style.display = 'none';
-            } catch (e) {
-                alert("发布失败: " + e.message);
-            } finally {
-                btn.innerText = "立即发布";
-                btn.disabled = false;
-            }
+            } catch (e) { alert("发布失败: " + e.message); } 
+            finally { btn.innerText = "立即发布"; btn.disabled = false; }
         }
 
         // ==========================================
@@ -524,10 +503,8 @@
                 const res = await fetch(GITHUB_BASE + 'home');
                 if (!res.ok) throw new Error("API Limit");
                 const data = await res.json();
-                if (!Array.isArray(data)) throw new Error("Data Format Error");
                 
                 const folders = data.filter(f => f.type === 'dir');
-                if (folders.length === 0) throw new Error("Empty Folders");
 
                 const slidesHtml = folders.map((f, i) => {
                     const mdUrl = `https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home/${f.name}/${f.name}.md`;
@@ -549,18 +526,13 @@
                 `;
 
                 document.getElementById('carousel-container').innerHTML = slidesHtml + controlsHtml;
-                
-                currentSlideIdx = 0;
                 startSlideTimer();
 
             } catch (error) {
-                console.error("加载首页错误:", error);
                 document.getElementById('carousel-container').innerHTML = `
                     <div class="error-msg">
-                        <p>🚧 主页资源加载失败</p>
-                        <p style="font-size: 1rem; color: #aaa;">(可能是触发了 GitHub 的请求次数限制，请等待几分钟后重试)</p>
-                    </div>
-                `;
+                        <p>🚧 主页资源加载失败 (Github API 受限)</p>
+                    </div>`;
             }
         }
 
