@@ -317,9 +317,9 @@
             const inner = document.getElementById('modal-inner');
             inner.innerHTML = `
                 <h2 style="margin-bottom:20px;">${mode === 'login' ? '用户登录' : '新用户注册'}</h2>
-                <div class="input-group"><input type="email" id="auth-email" placeholder="邮箱账号"></div>
-                <div class="input-group"><input type="password" id="auth-pwd" placeholder="密码"></div>
-                ${mode === 'register' ? '<div class="input-group"><input type="text" id="auth-name" placeholder="设置论坛昵称"></div>' : ''}
+                <div class="input-group"><input type="email" id="auth-email" class="modal-field" placeholder="邮箱账号"></div>
+                <div class="input-group"><input type="password" id="auth-pwd" class="modal-field" placeholder="密码"></div>
+                ${mode === 'register' ? '<div class="input-group"><input type="text" id="auth-name" class="modal-field" placeholder="设置论坛昵称"></div>' : ''}
                 <button class="btn-action" onclick="executeAuth('${mode}')">${mode === 'login' ? '立即登录' : '注册并登录'}</button>
                 <div class="auth-switch" onclick="openAuthModal('${mode === 'login' ? 'register' : 'login'}')">
                     ${mode === 'login' ? '没有账号？点击注册' : '已有账号？点击登录'}
