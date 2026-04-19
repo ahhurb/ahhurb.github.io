@@ -3,158 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>农忙春光里 - 官方网站</title>
+    <title>农忙春光里 - 交互动态版</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* 基础样式复位 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Microsoft YaHei", sans-serif;
-        }
+        :root { --primary-green: #4CAF50; --nav-height: 70px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", sans-serif; }
+        body { background: #000; color: #fff; overflow-x: hidden; }
 
-        body, html {
-            height: 100%;
-            overflow: hidden;
-        }
-
-        /* 全屏背景图 */
-        .background-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), 
-                        url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'); /* 示例农业背景 */
-            background-size: cover;
-            background-position: center;
-            z-index: -1;
-        }
-
-        /* 顶部导航栏 */
+        /* 顶部导航栏 - 永久置顶 */
         header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 50px;
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: var(--nav-height);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 50px; background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px); z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
+        .logo-area { display: flex; align-items: center; gap: 10px; color: #333; }
+        .logo-placeholder { width: 35px; height: 35px; background: var(--primary-green); border-radius: 50%; }
+        nav ul { display: flex; list-style: none; gap: 30px; }
+        nav ul li a { text-decoration: none; color: #333; font-size: 15px; font-weight: bold; transition: 0.3s; }
+        nav ul li a:hover { color: var(--primary-green); }
 
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        /* 轮播容器 */
+        #carousel-container { height: 100vh; width: 100%; position: relative; overflow: hidden; }
+        .slide {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; transition: opacity 1.2s ease-in-out;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;
         }
-
-        .logo-placeholder {
-            width: 50px;
-            height: 50px;
-            background: #4CAF50;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        nav ul {
-            display: flex;
-            list-style: none;
-            gap: 30px;
-        }
-
-        nav ul li a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 14px;
-        }
-
-        nav ul li a:hover {
-            color: #4CAF50;
-        }
-
-        /* 主体内容区 */
-        .hero-section {
-            height: calc(100vh - 90px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .hero-section h1 {
-            font-size: 5rem;
-            letter-spacing: 10px;
-            margin-bottom: 30px;
-        }
-
+        .slide.active { opacity: 1; z-index: 2; }
+        .slide-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); }
+        .slide-content { position: relative; z-index: 10; text-align: center; }
+        .slide-content h1 { font-size: 4.5rem; letter-spacing: 10px; margin-bottom: 25px; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        
         .enter-btn {
-            padding: 15px 60px;
-            border: 3px solid white;
-            background: transparent;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s;
+            padding: 12px 45px; border: 2px solid white; background: rgba(255,255,255,0.1);
+            color: white; font-size: 1.5rem; cursor: pointer; transition: 0.3s;
         }
+        .enter-btn:hover { background: white; color: #000; }
 
-        .enter-btn:hover {
-            background: white;
-            color: #2e7d32;
+        /* 手动控制按钮 */
+        .ctrl-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.1); border: none; color: white;
+            font-size: 40px; padding: 20px; cursor: pointer; z-index: 100;
+            transition: 0.3s; border-radius: 0 5px 5px 0;
         }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.3); }
+        .btn-prev { left: 0; }
+        .btn-next { right: 0; border-radius: 5px 0 0 5px; }
 
-        /* 快捷功能区 (原底部菜单的网页版体现) */
-        .bottom-bar {
-            position: absolute;
-            bottom: 40px;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            gap: 50px;
+        /* 详情内容页 */
+        #detail-view {
+            display: none; position: fixed; top: var(--nav-height); left: 0;
+            width: 100%; height: calc(100vh - var(--nav-height));
+            background: #fff; color: #333; z-index: 10000; overflow-y: auto;
         }
+        .content-card { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        #detail-img-small { width: 100%; max-height: 500px; object-fit: cover; border-radius: 12px; margin-bottom: 35px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .close-btn { cursor: pointer; color: var(--primary-green); margin-bottom: 25px; display: inline-block; font-weight: bold; font-size: 1.1rem; }
+        .markdown-body { line-height: 1.8; font-size: 1.15rem; color: #444; }
 
-        .feature-item {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(5px);
-            padding: 15px 25px;
-            border-radius: 10px;
-            color: white;
-            text-align: center;
-            min-width: 120px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .feature-item:hover {
-            transform: translateY(-5px);
-            background: rgba(255,255,255,0.25);
-        }
-
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; z-index: 99999; }
     </style>
 </head>
 <body>
 
-    <div class="background-container"></div>
-
     <header>
-        <div class="logo-area">
-            <div class="logo-placeholder">农</div>
-            <h2>农业资源管理系统</h2>
-        </div>
+        <div class="logo-area"><div class="logo-placeholder"></div><span>农业管理系统</span></div>
         <nav>
             <ul>
-                <li><a href="#">首页</a></li>
+                <li><a href="#" onclick="location.reload()">首页</a></li>
                 <li><a href="#">知识学习</a></li>
                 <li><a href="#">品质鉴定</a></li>
                 <li><a href="#">培训护航</a></li>
@@ -163,17 +83,119 @@
         </nav>
     </header>
 
-    <main class="hero-section">
-        <h1>农忙春光里</h1>
-        <a href="#" class="enter-btn">进入系统</a>
-    </main>
-
-    <div class="bottom-bar">
-        <div class="feature-item">🌱 种植指南</div>
-        <div class="feature-item">📊 实时监测</div>
-        <div class="feature-item">⚖️ 政策法规</div>
-        <div class="feature-item">📞 专家咨询</div>
+    <div id="carousel-container">
+        <div class="loading-overlay" id="loader">资源同步中...</div>
+        <button class="ctrl-btn btn-prev" onclick="manualChange(-1)">&#10094;</button>
+        <button class="ctrl-btn btn-next" onclick="manualChange(1)">&#10095;</button>
     </div>
 
+    <div id="detail-view">
+        <div class="content-card">
+            <div class="close-btn" onclick="closeDetail()">← 返回主页</div>
+            <img id="detail-img-small" src="">
+            <div id="md-content" class="markdown-body"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://api.github.com/repos/ahhurb/ahhurb-data/contents/home";
+        const RAW_URL = "https://raw.githubusercontent.com/ahhurb/ahhurb-data/main/home";
+        let homeData = [];
+        let currentIndex = 0;
+        let slideInterval;
+        const SLIDE_DURATION = 5000; // 5秒轮播
+
+        async function init() {
+            try {
+                const res = await fetch(API_URL);
+                const items = await res.json();
+                const folders = items.filter(i => i.type === 'dir');
+                for (let f of folders) {
+                    homeData.push({
+                        name: f.name,
+                        img: `${RAW_URL}/${f.name}/${f.name}.jpg`,
+                        md: `${RAW_URL}/${f.name}/${f.name}.md`
+                    });
+                }
+                renderCarousel();
+                resetTimer();
+                document.getElementById('loader').style.display = 'none';
+            } catch (e) {
+                console.error("加载失败", e);
+            }
+        }
+
+        function renderCarousel() {
+            const container = document.getElementById('carousel-container');
+            homeData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `slide ${index === 0 ? 'active' : ''}`;
+                div.innerHTML = `
+                    <img src="${item.img}" class="slide-bg" onerror="this.src='https://via.placeholder.com/1920?text=图片未找到'">
+                    <div class="slide-content">
+                        <h1>${item.name}</h1>
+                        <button class="enter-btn" onclick="openDetail(${index})">进入</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 切换逻辑
+        function changeSlide(direction) {
+            const slides = document.querySelectorAll('.slide');
+            if (slides.length < 2) return;
+            
+            slides[currentIndex].classList.remove('active');
+            currentIndex = (currentIndex + direction + slides.length) % slides.length;
+            slides[currentIndex].classList.add('active');
+        }
+
+        // 手动切换：切换并重置定时器
+        function manualChange(direction) {
+            changeSlide(direction);
+            resetTimer();
+        }
+
+        function resetTimer() {
+            if (slideInterval) clearInterval(slideInterval);
+            slideInterval = setInterval(() => changeSlide(1), SLIDE_DURATION);
+        }
+
+        async function openDetail(index) {
+            clearInterval(slideInterval);
+            const item = homeData[index];
+            const detailView = document.getElementById('detail-view');
+            const mdBox = document.getElementById('md-content');
+            
+            detailView.style.display = 'block';
+            document.getElementById('detail-img-small').src = item.img;
+            mdBox.innerHTML = "正在加载文档内容...";
+
+            try {
+                const res = await fetch(item.md);
+                const text = await res.text();
+                mdBox.innerHTML = marked.parse(text);
+                detailView.scrollTo(0, 0);
+            } catch (e) {
+                mdBox.innerHTML = "MD 文件加载失败，请检查仓库路径。";
+            }
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-view').style.display = 'none';
+            resetTimer();
+        }
+
+        // 支持键盘左右键切换
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('detail-view').style.display !== 'block') {
+                if (e.key === "ArrowLeft") manualChange(-1);
+                if (e.key === "ArrowRight") manualChange(1);
+            }
+        });
+
+        init();
+    </script>
 </body>
 </html>
