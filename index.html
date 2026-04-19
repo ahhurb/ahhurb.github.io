@@ -32,7 +32,7 @@
         /* 视图切换容器与【新增动效】 */
         .view-section { display: none; padding-top: var(--nav-height); min-height: 100vh; opacity: 0; }
         .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         #home-view { padding-top: 0; }
 
@@ -83,7 +83,7 @@
         .reply-item { border-top: 1px solid #f0f0f0; padding: 20px 0; word-break: break-word; }
 
         /* 悬浮发布球 */
-        .fab { position: fixed; bottom: 40px; right: 40px; width: 65px; height: 65px; background: var(--primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4); z-index: 8000; transition: 0.3s; }
+        .fab { position: fixed !important; top: auto !important; left: auto !important; right: 24px !important; bottom: 24px !important; width: 65px; height: 65px; background: var(--primary-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4); z-index: 12000; transition: 0.3s; margin: 0; transform: translateZ(0); }
         .fab:hover { transform: scale(1.1) rotate(90deg); }
 
         /* 弹窗系统 */
@@ -92,7 +92,10 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .input-group { margin-bottom: 18px; }
         .input-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
-        .input-group input[type="text"], .input-group input[type="email"], .input-group input[type="password"], .input-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+        .modal-field { width: 100%; padding: 16px 18px; border: 1px solid #dcdcdc; border-radius: 16px; font-size: 15px; background: #fff; outline: none; transition: 0.2s; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+        .modal-field:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12); }
+        .modal-textarea { width: 100%; min-height: 160px; padding: 16px 18px; border: 1px solid #dcdcdc; border-radius: 16px; font-size: 15px; background: #fff; outline: none; transition: 0.2s; resize: vertical; line-height: 1.6; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+        .modal-textarea:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12); }
         .input-group input[type="file"] { width: 100%; padding: 8px; font-size: 14px; border: 1px dashed #ccc; border-radius: 6px; background: #fafafa; }
         
         .btn-action { width: 100%; background: var(--primary-green); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
@@ -115,7 +118,7 @@
                 <li><a onclick="switchView('home-view')">首页</a></li>
                 <li><a onclick="requireAuth(() => loadList('knowledge'))">知识学习</a></li>
                 <li><a onclick="requireAuth(() => loadList('law & live'))">培训护航</a></li>
-                <li><a onclick="requireAuth(() => loadForum())">交流讨论</a></li>
+                <li><a onclick="requireAuth(() => openForum())">交流讨论</a></li>
                 <li id="user-nav"><a onclick="openAuthModal()">登录</a></li>
             </ul>
         </nav>
@@ -145,16 +148,14 @@
             <input type="text" id="forum-search" class="search-input" placeholder="🔍 搜索大家都在讨论什么话题..." oninput="filterForum()">
             <div id="forum-content"></div>
         </div>
-        <div class="fab" onclick="requireAuth(() => openPostModal('post'))">发布</div>
     </div>
 
     <div id="post-detail-view" class="view-section">
         <div class="content-card">
-            <div onclick="switchView('forum-view')" style="cursor:pointer; color:var(--primary-green); margin-bottom:25px; font-weight:bold;">← 返回论坛</div>
+            <div onclick="openForum()" style="cursor:pointer; color:var(--primary-green); margin-bottom:25px; font-weight:bold;">← 返回论坛</div>
             <div id="post-main-content"></div>
             <div id="replies-content" style="margin-top: 30px;"></div>
         </div>
-        <div class="fab" onclick="requireAuth(() => openPostModal('reply'))">回复</div>
     </div>
 
     <div id="activity-view" class="view-section">
@@ -164,6 +165,9 @@
             <div id="activity-content"></div>
         </div>
     </div>
+
+    <div id="floating-fab-post" class="fab" style="display:none;" onclick="handleFloatingFab('post')">发布</div>
+    <div id="floating-fab-reply" class="fab" style="display:none;" onclick="handleFloatingFab('reply')">回复</div>
 
     <div class="modal-overlay" id="main-modal" onclick="if(event.target==this) this.style.display='none'">
         <div class="modal-box" id="modal-inner"></div>
@@ -188,10 +192,34 @@
         // 搜索用的本地缓存数据
         let currentListFiles = [];
         let currentForumPosts = [];
+        let forumLoaded = false;
 
         // ==========================================
         // 路由与基础操作
         // ==========================================
+        function updateFloatingFab(id) {
+            const fabPost = document.getElementById('floating-fab-post');
+            const fabReply = document.getElementById('floating-fab-reply');
+            if (!fabPost || !fabReply) return;
+
+            fabPost.style.display = 'none';
+            fabReply.style.display = 'none';
+
+            if (id === 'forum-view') {
+                fabPost.style.display = 'flex';
+            } else if (id === 'post-detail-view') {
+                fabReply.style.display = 'flex';
+            }
+        }
+
+        function handleFloatingFab(type) {
+            if (type === 'post') {
+                requireAuth(() => openPostModal('post'));
+            } else if (type === 'reply') {
+                requireAuth(() => openPostModal('reply'));
+            }
+        }
+
         function switchView(id) {
             document.querySelectorAll('.view-section').forEach(v => {
                 v.classList.remove('active');
@@ -199,7 +227,8 @@
             // 触发重绘以保证动画每次都生效
             void document.getElementById(id).offsetWidth; 
             document.getElementById(id).classList.add('active');
-            
+
+            updateFloatingFab(id);
             if(!['doc-view', 'post-detail-view'].includes(id)) previousView = id;
             window.scrollTo(0,0);
         }
@@ -214,6 +243,8 @@
                 const { data } = await db.from('profiles').select('*').eq('id', user.id).single();
                 currentProfile = data;
                 nav.innerHTML = `<img class="nav-avatar" src="${data?.avatar_url || DEFAULT_AVATAR}" onclick="openProfile()">`;
+                // 仅预取论坛数据，不切换页面，避免首页初始化时跳转到论坛
+                preloadForumCache();
             } else {
                 nav.innerHTML = `<a onclick="openAuthModal()">登录</a>`;
             }
@@ -422,28 +453,67 @@
         // ==========================================
         // 交流讨论论坛 (支持过滤与回复删除)
         // ==========================================
-        async function loadForum() {
+        async function loadForum(forceRefresh = true) {
             switchView('forum-view');
-            document.getElementById('forum-search').value = ''; // 进入时清空搜索框
-            document.getElementById('forum-content').innerHTML = "正在拉取论坛数据...";
-            const { data } = await db.from('posts').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false });
-            if (data) {
-                currentForumPosts = data;
-                renderForum();
+            const searchEl = document.getElementById('forum-search');
+            const contentEl = document.getElementById('forum-content');
+            if (searchEl && forceRefresh) searchEl.value = ''; // 进入时清空搜索框
+
+            contentEl.innerHTML = "正在拉取论坛数据...";
+
+            try {
+                if (!forceRefresh && forumLoaded && Array.isArray(currentForumPosts)) {
+                    renderForum(searchEl?.value || '');
+                    return;
+                }
+
+                const { data, error } = await db
+                    .from('posts')
+                    .select('*, profiles(username, avatar_url)')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                currentForumPosts = Array.isArray(data) ? data : [];
+                forumLoaded = true;
+                renderForum(searchEl?.value || '');
+            } catch (e) {
+                console.error('loadForum failed:', e);
+                contentEl.innerHTML = `<p style="text-align:center; color:#999; margin-top:30px;">论坛列表加载失败，请稍后再试。</p>`;
+            }
+        }
+
+        function openForum() {
+            loadForum(true);
+        }
+
+        async function preloadForumCache() {
+            if (forumLoaded && Array.isArray(currentForumPosts) && currentForumPosts.length > 0) return;
+            try {
+                const { data, error } = await db
+                    .from('posts')
+                    .select('*, profiles(username, avatar_url)')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                currentForumPosts = Array.isArray(data) ? data : [];
+                forumLoaded = true;
+            } catch (e) {
+                console.error('preloadForumCache failed:', e);
             }
         }
 
         function renderForum(query = '') {
-            const q = query.toLowerCase();
-            const filtered = currentForumPosts.filter(p => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q));
+            const q = (query || '').toLowerCase();
+            const list = Array.isArray(currentForumPosts) ? currentForumPosts : [];
+            const filtered = list.filter(p => (p.title || '').toLowerCase().includes(q) || (p.content || '').toLowerCase().includes(q));
             
             const html = filtered.map(p => `
                 <div class="forum-card" onclick="showPostDetail('${p.id}')">
                     <div class="forum-header">
-                        <img src="${p.profiles.avatar_url || DEFAULT_AVATAR}">
-                        <span class="forum-title">${p.title}</span>
+                        <img src="${p.profiles?.avatar_url || DEFAULT_AVATAR}">
+                        <span class="forum-title">${p.title || ''}</span>
                     </div>
-                    <div class="forum-preview">${p.content}</div>
+                    <div class="forum-preview">${p.content || ''}</div>
                 </div>
             `).join('');
             document.getElementById('forum-content').innerHTML = html || '<p style="text-align:center; color:#999; margin-top:30px;">没有找到匹配的话题。</p>';
@@ -506,7 +576,7 @@
         async function deletePost(id) {
             if(confirm("确定彻底删除该话题吗？")) {
                 await db.from('posts').delete().eq('id', id);
-                loadForum();
+                await loadForum(true);
             }
         }
 
@@ -521,8 +591,8 @@
             const inner = document.getElementById('modal-inner');
             inner.innerHTML = `
                 <h2>${type === 'post' ? '发布新话题' : '回复讨论'}</h2>
-                ${type === 'post' ? '<div class="input-group"><label>问题概要</label><input id="m-title" placeholder="一句话描述你的问题"></div>' : ''}
-                <div class="input-group"><label>内容详情</label><textarea id="m-content" rows="5" placeholder="支持文字与 Markdown..."></textarea></div>
+                ${type === 'post' ? '<div class="input-group"><label>问题概要</label><input id="m-title" class="modal-field" type="text" placeholder="一句话描述你的问题"></div>' : ''}
+                <div class="input-group"><label>内容详情</label><textarea id="m-content" class="modal-textarea" rows="5" placeholder="支持文字与 Markdown..."></textarea></div>
                 <div class="input-group">
                     <label>插入附图 (可选)</label>
                     <input type="file" id="m-image" accept="image/*">
@@ -553,7 +623,7 @@
                     const title = document.getElementById('m-title').value.trim();
                     if(!title) { alert("概要不能为空"); btn.disabled = false; btn.innerText = "立即发布"; return; }
                     await db.from('posts').insert({ user_id: currentUser.id, title, content: finalContent });
-                    loadForum();
+                    await loadForum(true);
                 } else {
                     await db.from('replies').insert({ user_id: currentUser.id, post_id: currentPostId, content: finalContent });
                     loadReplies(currentPostId);
@@ -638,8 +708,28 @@
             }
         }
 
-        initHome();
-        checkAuth();
+
+function resetToHome() {
+    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+    const home = document.getElementById('home-view');
+    if (home) home.classList.add('active');
+    previousView = 'home-view';
+    updateFloatingFab('home-view');
+    window.scrollTo(0, 0);
+}
+
+function initializeApp() {
+    resetToHome();
+    initHome();
+    checkAuth();
+}
+
+window.addEventListener('pageshow', () => {
+    // 处理浏览器后退/前进缓存，避免带着论坛页状态回到站点首页
+    resetToHome();
+});
+
+initializeApp();
     </script>
 </body>
 </html>
